@@ -1,0 +1,102 @@
+#sample data
+sample_data <- data.frame(text = c(
+  "The product quality is amazing and the service was fantastic!",
+  "Absolutely terrible experience, the purchase was a waste of money.",
+  "Value for money. Great service and overall good experience.",
+  "The quality of the product was poor. Not satisfied with the purchase.",
+  "Fantastic service, friendly staff and good value."),
+  stringsAsFactors = FALSE) 
+
+#Tokenizing 
+install.packages("tidytext")
+install.packages("tidyverse")
+library(tidytext)
+library(tidyverse)
+
+tidy_text <- sample_data %>%
+  unnest_tokens(word, text)
+
+#Removing stop words
+data("stop_words")
+tidy_text_clean <- tidy_text %>%
+  anti_join(stop_words, by = "word")
+
+#Word frequency
+word_freq <- tidy_text_clean %>%
+  count(word, sort = TRUE)
+
+print(head(word_freq, 10))
+
+#Bar plot for top 10 words
+word_freq %>%
+  slice_max(order_by = n, n = 10) %>%
+  ggplot(aes(x = reorder(word, n), y = n)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  labs(title = "Top 10 Most Frequent Words",
+       x = "Words",
+       y = "Frequency") +
+  theme_minimal()
+
+#Word cloud
+install.packages("wordcloud")
+install.packages("RColorBrewer")
+library(wordcloud)
+library(RColorBrewer)
+
+set.seed(1234)
+wordcloud(words = word_freq$word,
+          freq = word_freq$n,
+          min.freq = 1,
+          max.words = 100,
+          random.order = FALSE,
+          colors = brewer.pal(8, "Dark2"))
+
+
+
+#Sentiment analysis
+install.packages(c("tm","ggplot2","syuzhet","e1071"))
+
+library(tm)
+library(ggplot2)
+library(syuzhet)
+library(e1071)
+
+review <-c ("Excellent battery life and display",
+            "Strap quality is very poor",
+            "Value for money",
+            "Delivery was delayed",
+            "Stylish design and smooth performance",
+            "Average features for the price",
+            "Screen stopped working after a week",
+            "Easy to use and user-friendly",
+            "Packaging was not good",
+            "Totally satisfied with the performance")
+
+review_id <- paste0("R",1:10)
+
+corp <- Corpus(VectorSource(review))
+
+corp <- tm_map(corp, removePunctuation)
+corp <- tm_map(corp, removeWords, stopwords("en"))
+
+sentiment <- get_sentiment(review)
+
+classify <- ifelse(sentiment>0, "Positive", 
+                   ifelse(sentiment<0, "Negative","Neutral"))
+
+result <- data.frame(REVIEW_ID=review_id, 
+                     REVIEW=review, 
+                     SCORE=sentiment,
+                     SENTIMENT=classify)
+
+ggplot(result, aes(x=SENTIMENT, fill = SENTIMENT))+
+  geom_bar()+
+  scale_fill_manual(values = c("Positive"="green",
+                               "Negative"="red",
+                               "Neutral"="gray"))+
+  labs(title = "Sentiment Analysis of Reviews",
+       x="Sentiment",
+       y="Count")+
+  theme_minimal()
+  
